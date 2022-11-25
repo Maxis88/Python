@@ -1,9 +1,14 @@
 from customtkinter import *
 
 root = CTk()
-frame = CTkFrame(root, )
-frame.pack(fill='both', expand=1)
+root.geometry("800x600")
+print()
+frame = CTkFrame(root, width=200, height=590,)
+frame.grid(column=0, row=0, padx=10)
 
-label = CTkLabel(frame, text='Zawartosc ramki')
-label.pack()
+frame_tresc = CTkFrame(root, width=600, height=590)
+frame_tresc.grid(column=1, row=0)
+
+label = CTkLabel(frame, text='Menu')
+label.pack(anchor='n', fill='x', expand=1)
 root.mainloop()
