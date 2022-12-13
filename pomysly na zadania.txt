@@ -1,0 +1,56 @@
+Zdefiniuj klasę Student, która będzie przechowywać informacje o imieniu, nazwisku, numerze indeksu i ocenach studenta. 
+Klasa powinna zawierać metody do wyświetlania informacji o studentach, dodawania ocen oraz obliczania średniej ocen studenta.
+-------------------------------------
+Zdefiniuj klasę Book, która będzie przechowywać informacje o tytule, autorze, liczbie stron i cenie książki. 
+Klasa powinna zawierać metody do wyświetlania informacji o książkach, zmieniania ceny oraz obliczania kosztu 
+przeczytania książki na podstawie liczby stron i ceny.
+---------------------------------------
+Zdefiniuj klasę Product, która będzie przechowywać informacje o nazwie, cenie i ilości produktu. 
+Klasa powinna zawierać metody do wyświetlania informacji o produkcie, zmieniania ilości produktu oraz 
+obliczania całkowitej ceny dla danej ilości produktu.
+----------------------------------------
+Zdefiniuj klasę Car, która będzie przechowywać informacje o marce, modelu, przebiegu i pojemności 
+silnika samochodu. Klasa powinna zawierać metody do wyświetlania informacji o samochodzie, zmieniania przebiegu
+ oraz obliczania spalania na 100 km na podstawie pojemności silnika i przebiegu.
+------------------------------------------
+ Jeśli szukasz projektu, który pozwoli Ci rozwijać swoje umiejętności programowania przez długi czas, 
+ jednym z pomysłów może być stworzenie aplikacji do zarządzania budżetem domowym. 
+ Aplikacja ta mogłaby zawierać narzędzia do wprowadzania informacji o wydatkach i przychodach, 
+ a następnie analizowania tych danych, aby zobaczyć, jak efektywnie gospodarujesz swoimi pieniędzmi. 
+ Aplikacja mogłaby również zawierać narzędzia do planowania budżetu i zarządzania finansami.
+
+ Jeśli chcesz stworzyć aplikację do zarządzania budżetem domowym w języku Python, powinieneś skorzystać z następujących modułów:
+
+Tkinter: Ten moduł pozwoli Ci stworzyć interfejs użytkownika w aplikacji, dzięki któremu użytkownicy będą mogli 
+wprowadzać informacje o swoich wydatkach i przychodach oraz korzystać z innych narzędzi w aplikacji.
+
+Pandas: Ten moduł pozwoli Ci przetwarzać i analizować dane w aplikacji, np. obliczać średnią miesięczną 
+wydatków lub wyświetlać wykresy przedstawiające rozkład wydatków.
+
+Matplotlib: Ten moduł pozwoli Ci tworzyć różnego rodzaju wykresy i wizualizacje danych, które będą przydatne
+ w analizowaniu wydatków i przychodów użytkowników.
+
+Sqlite3: Ten moduł pozwoli Ci przechowywać dane w aplikacji, np. informacje o wydatkach i przychodach 
+użytkowników, w bazie danych. Dzięki temu będziesz mógł zapisywać i odczytywać te dane w dowolnym momencie, 
+nawet po zamknięciu aplikacji.
+
+from PIL import Image, ImageDraw, ImageFont
+
+# Otwórz zdjęcie i pobierz jego wymiary
+im = Image.open('my_image.jpg')
+width, height = im.size
+
+# Utwórz obiekt ImageDraw i ustaw czcionkę
+draw = ImageDraw.Draw(im)
+font = ImageFont.truetype('arial.ttf', 16)
+
+# Wybierz pozycję tekstu w prawym dolnym rogu
+text_x = width - 10
+text_y = height - 10
+
+# Utwórz tekst na obrazie
+text = "My text"
+draw.text((text_x, text_y), text, font=font, fill=(255,255,255))
+
+# Zapisz zmieniony obraz
+im.save('my_image_with_text.jpg')
