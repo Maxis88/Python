@@ -6,10 +6,29 @@ import time
 import shutil
 import sqlite3
 
+
+def linia():
+    print()
+    print(60*"#")
+
+
 # ustalanie parametrów
-SOURCE = "D:/testowy"
-OUTPUT = SOURCE + '/edited/'
-MINI =SOURCE + '/zmniejszone/'
+try:
+    os.mkdir("d:\\testowy")
+    SOURCE = "D:/testowy"
+except FileExistsError:
+    print('Ustawiono katalog D:\\testowy jako domyślny')
+    SOURCE = "D:/testowy"
+else:
+    katalog = input('Podaj katalog ze zdjęciami, na którym chcesz pracować: ')
+    if os.path.isdir(katalog):
+        SOURCE = katalog
+linia()
+# kreowanie bazy danych
+OUTPUT = SOURCE + '/Edited/'
+MINI = SOURCE + '/Resized/'
+done = False
+akt_menu = 'menu'
 
 connection = sqlite3.connect('ustawienia.db')
 kur = connection.cursor()
@@ -30,6 +49,8 @@ if len(dane) == 0:
         SHARPNESS, BRIGHTNESS, SATURATION, CONTRAST, "", "domyslne", True, ""))
     connection.commit()
 
+# wyświetla ustawienia profili
+
 
 def pobierz_ustawienia(domyslny=True):
     if domyslny:
@@ -40,6 +61,8 @@ def pobierz_ustawienia(domyslny=True):
         pobierz_dane = kur.execute('SELECT * FROM ustawienia')
         dane = pobierz_dane.fetchall()
     return dane
+
+# zmienia domyślny adres folderu
 
 
 def zmiana_folderu():
@@ -61,6 +84,22 @@ def zmiana_folderu():
 
     return (SOURCE)
 
+# Wyświetla wszystkie informacje o używnaym profilu
+
+
+def informacje_o_profilu():
+    zaznacz = kur.execute('SELECT * FROM ustawienia WHERE domyslny="True"')
+    profil = zaznacz.fetchone()
+    print("Informacje o aktualnym profilu zdjęciowym: ")
+    print('\tNazwa: ', profil[5])
+    print('\tOstrość: ', profil[0])
+    print('\tJasność: ', profil[1])
+    print('\tSaturacja: ', profil[2])
+    print('\tKontrast: ', profil[3])
+    print('\tPodpis: ', profil[4])
+
+# wyświetla informacje o wszystkich profilach
+
 
 def profile_zdjec():
 
@@ -76,6 +115,7 @@ def profile_zdjec():
                     \n\tSaturacja: {nazwa[2]},\n\tKontrast: {nazwa[3]}')
 
 
+# pozwala na edycje domyślnego profilu
 def zmiana_korekcji():
     # odczytaj ustawienia z bazy danych
 
@@ -164,6 +204,8 @@ def zmiana_korekcji():
                 continue
     print(f'Profil {czy_zapisac.lower()} jest teraz ustawiony jako domyślny')
 
+# Pozwala ustawić podpis do zdjęcia
+
 
 def ustaw_podpis():
     dane = pobierz_ustawienia()
@@ -175,20 +217,22 @@ def ustaw_podpis():
         print('Nowy podpis ustawiony na "{}" dla profilu: {}'.format(
             nowy_podpis, dane[5]))
 
+# Zmienia rozmiar zdjęcia
+
 
 def zmien_rozmiar(rozmiar):
     global SOURCE, MINI, OUTPUT
-    podfolder=os.path.join(SOURCE, 'zmniejszone')
+    podfolder = SOURCE + "/Resized/"
     try:
         os.mkdir(podfolder)
     except FileExistsError:
         pass
-    
+
     for name in os.listdir(SOURCE):
         # weź pod uwagę tylko zdjęcia w formacie JPG
 
         if ".jpg" in name.lower():
-            
+
             file_adress = os.path.join(SOURCE, name)
             # wyświetl nazwę obrabianego pliku
             print("Pracuję nad: ", name, "\n")
@@ -197,24 +241,54 @@ def zmien_rozmiar(rozmiar):
                 print(f'- Zmieniam rozmiar zdjęcia na {rozmiar*100} %')
                 width = new_file.width * rozmiar
                 height = new_file.height * rozmiar
-                new_file=new_file.resize((int(width), int(height)))
+                new_file = new_file.resize((int(width), int(height)))
                 new_file.save(os.path.join(MINI, name))
-    dane=pobierz_ustawienia()
 
-    korekcja(MINI, dane[4], adres_zapisu=OUTPUT)
+# usuwa oryginalne pliki
 
 
-def menu(opcja='menu'):
+def usun_oryginalne():
+    global SOURCE
+    pytanie = input(
+        f'Czy jesteś pewien, że chcesz usunąć wszystkie oryginalne zdjęcia z katalogu: {SOURCE}? [T/N] ')
+    if pytanie.lower() == 't':
+        for plik in os.listdir(SOURCE):
+            if ".jpg" in plik.lower():
+                print(f'Usuwanie pliku: {plik.lower()}')
+                try:
+                    os.remove(os.path.join(SOURCE, plik))
+                except Exception as e:
+                    print('Nie można usunąć pliku: ',
+                          plik.lower(), "Błąd: ", e.args[1])
+
+# pyta czy usunąć pliki z katalogu głównego
+
+
+def czy_usunac():
+    pytanie = input('Czy usunąć oryginalne pliki? [T/N] ')
+    if pytanie.lower() == 't':
+        usun_oryginalne()
+
+# Wyświetla menu i steruje programem
+
+
+def menu(menu='menu'):
+    global akt_menu
     print("Wybierz opcję, która Cię interesuje: ")
     linia()
-    print("1. Koryguj zdjęcia teraz ")
-    print("2. Przerób zdjęcia na czarbo-białe")
-    print("3. Zmień rozmiar zdjęć")
-    print("4. Ustaw domyślną nazwę zdjęć")
-    print("5. Ustaw podpis")
-    print("6. Wybierz domyślny profil zdjęć")
-    print("7. Wyczyść profile zdjęć")
-    print('8. Zakończ działanie')
+    if menu == "menu":
+        print("1. Koryguj zdjęcia teraz ")
+        print("2. Przerób zdjęcia na czarbo-białe")
+        print("3. Zmień rozmiar zdjęć")
+        print("4. Ustawienia")
+        print('5. Zakończ działanie')
+    elif menu == 'ustawienia':
+        print("1. Ustaw domyślną nazwę zdjęć")
+        print("2. Ustaw podpis")
+        print("3. Wybierz domyślny profil zdjęć")
+        print("4. Wyczyść profile zdjęć")
+        print("5. <- Wstecz")
+
     wybor = input('Wybieram opcję: ')
 
     opcja = pobierz_ustawienia()
@@ -224,127 +298,133 @@ def menu(opcja='menu'):
     CONTRAST = opcja[3]
     podpis = opcja[4]
     nazwa_plikow = opcja[7]
-
-    match wybor:
-        case "1":
-            folder = zmiana_folderu()
-            korekcja(folder, podpis, True)
-
-            probka = input(
-                'W wybranym katalogu został utworzony folder "probka" a w nim jedno zdjęcie prezentujące ustawienia.\n\
-                Czy zastosować te ustawienia do wszystkich plików? [T/N] ')
-            if probka.lower() == 't':
-                try:
-                    shutil.rmtree(folder + "/probka")
-                except:
-                    pass
-                korekcja(SOURCE, podpis)
-            else:
-                poprawki = input(
-                    'Czy chcesz wprowadzić korekty parametrów ? [T/N]')
-                if poprawki.lower() == 't':
-                    zmiana_korekcji()
-                else:
+    if menu == 'menu':
+        match wybor:
+            case "1":
+                folder = zmiana_folderu()
+                korekcja(folder, podpis, True)
+                informacje_o_profilu()
+                Sample = input(
+                    'W wybranym katalogu został utworzony folder "Sample" a w nim jedno zdjęcie prezentujące ustawienia.\n\
+    Czy zastosować te ustawienia do wszystkich plików? [T/N] ')
+                if Sample.lower() == 't':
+                    try:
+                        shutil.rmtree(folder + "/Sample")
+                    except:
+                        pass
                     korekcja(SOURCE, podpis)
-        case "2":
-            folder = zmiana_folderu()
-            korekcja(folder, podpis, True, bw=True)
+                else:
+                    poprawki = input(
+                        'Czy chcesz wprowadzić korekty parametrów ? [T/N]')
+                    if poprawki.lower() == 't':
+                        zmiana_korekcji()
+                    else:
+                        korekcja(SOURCE, podpis)
+                czy_usunac()
+            case "2":
+                folder = zmiana_folderu()
+                korekcja(folder, podpis, True, bw=True)
 
-            probka = input(
-                'W wybranym katalogu został utworzony folder "probka" a w nim jedno zdjęcie prezentujące ustawienia.\n\
-                Czy zastosować te ustawienia do wszystkich plików? [T/N] ')
-            if probka.lower() == 't':
-                try:
-                    shutil.rmtree(folder + "/probka")
-                except:
-                    pass
-                korekcja(SOURCE, podpis, bw=True)
-            else:
-                poprawki = input(
-                    'Czy chcesz wprowadzić korekty parametrów ? [T/N]')
-                if poprawki.lower() == 't':
-                    zmiana_korekcji()
-        
-        case "3":
-            # edytowanie zdjęcia
-            rozmiar = input("Wpisz jaki % rozmiar powinno mieć finalne zdjęcie: ")
-            if "%" in rozmiar and int(rozmiar)<100 and int(rozmiar)>0:
-                rozmiar=rozmiar.replace("%", "")
-            elif int(rozmiar)<100 and int(rozmiar)>0:
-                rozmiar=int(rozmiar)/100
-                zmien_rozmiar(rozmiar)
+                Sample = input(
+                    'W wybranym katalogu został utworzony folder "Sample" a w nim jedno zdjęcie prezentujące ustawienia.\n\
+                    Czy zastosować te ustawienia do wszystkich plików? [T/N] ')
+                if Sample.lower() == 't':
+                    try:
+                        shutil.rmtree(folder + "/Sample")
+                    except:
+                        pass
+                    korekcja(SOURCE, podpis, bw=True)
+                    czy_usunac()
+                else:
+                    poprawki = input(
+                        'Czy chcesz wprowadzić korekty parametrów ? [T/N]')
+                    if poprawki.lower() == 't':
+                        zmiana_korekcji()
+
+            case "3":
+                # edytowanie rozmiaru zdjęcia
+                rozmiar = input(
+                    "Wpisz jaki procentowy rozmiar powinno mieć finalne zdjęcie: ")
+                if "%" in rozmiar and int(rozmiar) < 100 and int(rozmiar) > 0:
+                    rozmiar = rozmiar.replace("%", "")
+                elif int(rozmiar) < 100 and int(rozmiar) > 0:
+                    rozmiar = int(rozmiar)/100
+                    zmien_rozmiar(rozmiar)
+                    czy_usunac()
+                else:
+                    print('Niepoprawne dane ...')
+            case "4":
+                akt_menu = 'ustawienia'
+            case "5":
+                quit()
+
+    else:
+        match wybor:
+            case "1":
+                nowa_nazwa = input(
+                    f"Aktualnie używana nazwa to: {nazwa_plikow}, wpisz nową nazwę: ")
+                if nowa_nazwa != "":
+                    kur.execute(
+                        'UPDATE ustawienia SET nazwa_plikow="{}" WHERE nazwa="{}"')
+                    connection.commit()
+                    print("- Dane zostały zaktualizowane.")
+            case "2":
+                ustaw_podpis()
+
+            case "3":
+                # lista profili
+                profile_zdjec()
+                profil = input('Podaj numer profilu, który chcesz wybrać: ')
+                dane = pobierz_ustawienia(False)
+                profile = {}
+                if int(profil) <= len(dane) and int(profil) > 0:
+                    for x, info in enumerate(dane, start=1):
+                        profile[x] = info[5]
+                    print(f'Wybrano profil: {profile[int(profil)]}')
+                    kur.execute(f'UPDATE ustawienia SET domyslny="{False}"')
+                    connection.commit()
+                    kur.execute(
+                        f'UPDATE ustawienia SET domyslny="{True}" WHERE nazwa="{profile[int(profil)]}"')
+                    connection.commit()
+                else:
+                    print('Podano błędny numer...')
+            case "4":
+                # czyść profile
+                zapytaj = input(
+                    'Czy jesteś pewny, że chcesz usunąć wszystkie profile ( prócz domyślnego ) ? [T/N]')
+                if zapytaj.lower() == 't':
+                    kur.execute(
+                        'DELETE FROM ustawienia WHERE nazwa!="domyslne"')
+                    connection.commit()
+                    print('Profile usunięte...')
+                    linia()
+                else:
+                    print('Przechodzę więc do menu...')
+            case "5":
+                akt_menu = 'menu'
 
 
-            else:
-                print('Niepoprawne dane ...')
-        
-        case "4":
-            nowa_nazwa = input(
-                f"Aktualnie używana nazwa to: {nazwa_plikow}, wpisz nową nazwę: ")
-            if nowa_nazwa != "":
-                kur.execute(
-                    'UPDATE ustawienia SET nazwa_plikow="{}" WHERE nazwa="{}"')
-                connection.commit()
-                print("- Dane zostały zaktualizowane.")
-        case "5":
-            ustaw_podpis()
+# główna funkcja korygująca wszystkie zdjęcia lub próbkę w katalogu
+def korekcja(adres, podpis, Sample=False, adres_zapisu="", bw=False):
 
-        case "6":
-            # lista profili
-            profile_zdjec()
-            profil = input('Podaj numer profilu, który chcesz wybrać: ')
-            dane = pobierz_ustawienia(False)
-            profile={}
-            if int(profil)<=len(dane) and int(profil)>0:
-                for x, info in enumerate(dane, start=1):
-                    profile[x]=info[5]
-                print(f'Wybrano profil: {profile[int(profil)]}')
-                kur.execute(f'UPDATE ustawienia SET domyslny="{False}"')
-                connection.commit()
-                kur.execute(f'UPDATE ustawienia SET domyslny="{True}" WHERE nazwa="{profile[int(profil)]}"')
-                connection.commit()
-            else:
-                print('Podano błędny numer...')
-        case "7":
-            # czyść profile 
-            zapytaj= input('Czy jesteś pewny, że chcesz usunąć wszystkie profile ( prócz domyślnego ) ? [T/N]')
-            if zapytaj.lower()=='t':
-                kur.execute('DELETE FROM ustawienia WHERE nazwa!="domyslne"')
-                connection.commit()
-                print('Profile usunięte...')
-                linia()
-            else:
-                print('Przechodzę więc do menu...')
-        case "8":
-            quit()
-            
-
-
-def linia():
-    print()
-    print(60*"#")
-
-
-def korekcja(adres, podpis, probka=False, adres_zapisu="", bw=False):
-    global OUTPUT
     dane = pobierz_ustawienia()
     SHARPNESS = dane[0]
     BRIGHTNESS = dane[1]
     SATURATION = dane[2]
     CONTRAST = dane[3]
     SOURCE = adres
-    
+    OUTPUT = SOURCE + "/Edited/"
     FILES_COUNT = 0
-    new_output = SOURCE + '/probka/'
-    
-    if probka:
+    new_output = SOURCE + '/Sample/'
+
+    if Sample:
         if not os.path.isdir(new_output):
             print('- Tworzenie nowego katalogu pod zdjęcie próbne...')
             os.mkdir(new_output)
         #OUTPUT = new_output
     else:
         try:
-            os.mkdir(SOURCE + "/edited")
+            os.mkdir(SOURCE + "/Edited")
         except:
             pass
 
@@ -382,55 +462,56 @@ def korekcja(adres, podpis, probka=False, adres_zapisu="", bw=False):
                 print(f"- Poprawiam ostrość ({SHARPNESS})...")
                 enhance = ImageEnhance.Sharpness(new_file)
                 new_file = enhance.enhance(SHARPNESS)
-                
+                # podpisz zdjęcie jeśli zdefiniowano
+                if podpis != "":
+                    width, height = new_file.size
+
+                    rect = ImageDraw.Draw(new_file, mode='RGBA')
+
+                    rysuj = ImageDraw.Draw(new_file)
+                    czcionka = ImageFont.truetype(
+                        'arial.ttf', int(width*0.015))
+                    pos_x, pos_y, szerokosc_czcionki, wysokosc_czcionki = czcionka.getbbox(
+                        podpis)
+
+                    text_x = width - szerokosc_czcionki - (width*0.015)
+                    text_y = height - wysokosc_czcionki - (height*0.015)
+                    rect.rectangle((text_x-(width*0.007), text_y-(height*0.007),
+                                   width-(width*0.007), height-(height*0.007)), fill=(0, 0, 0, 100))
+                    rysuj.text((text_x, text_y), podpis,
+                               font=czcionka, fill=(255, 255, 255))
+
                 if not bw:
                     # zmiana nasycenia kolorów
                     print(f'- Zmieniam saturacje o {SATURATION*100}%')
                     # obrazek tymczasowy
                     tymczasowy = new_file.convert('HSV')
                     tylko_saturacja = tymczasowy.split()[1]
-                    nasycenie_zmodyfikowane = tylko_saturacja.point(lambda x: x+(x*SATURATION))
+                    nasycenie_zmodyfikowane = tylko_saturacja.point(
+                        lambda x: x+(x*SATURATION))
                     tymczasowy = Image.merge(
-                        'HSV', 
+                        'HSV',
                         (tymczasowy.split()[0], nasycenie_zmodyfikowane, tymczasowy.split()[2]))
                     new_file = tymczasowy.convert('RGB')
                 else:
                     print("- Zmieniam obraz na czarbo-biały...")
                     new_file = new_file.convert("L")
-                
-                # podpisz zdjęcie jeśli zdefiniowano
-                if podpis != "":
-                    width, height = new_file.size
-                    
-                    rect = ImageDraw.Draw(new_file, mode='RGBA')
-                    
-                    
-                    rysuj = ImageDraw.Draw(new_file)
-                    czcionka = ImageFont.truetype('arial.ttf', 80)
-                    pos_x, pos_y, szerokosc_czcionki, wysokosc_czcionki = czcionka.getbbox(
-                        podpis)
 
-                    text_x = width - szerokosc_czcionki - 100
-                    text_y = height - wysokosc_czcionki - 100
-                    rect.rectangle((text_x-50, text_y-50, width-50, height-50), fill=(0,0,0, 80))
-                    rysuj.text((text_x, text_y), podpis,
-                               font=czcionka, fill=(255, 255, 255))
-                
                 # zapis poprawionego pliku
-                if probka:
+                if Sample:
                     new_file.save(new_output + name)
                     OUTPUT = OUTPUT.replace("//", "\\")
-                    
+
                 else:
                     new_file.save(OUTPUT + name)
                     OUTPUT = OUTPUT.replace("//", "\\")
-                   
+
                 linia()
 
-        if probka and FILES_COUNT > 0:
+        if Sample and FILES_COUNT > 0:
             break
-    
-    if new_output:
+
+    if new_output and Sample:
         print('- Pliki zostały zapisane do: ', new_output)
     else:
         print('- Pliki zostały zapisane do: ', OUTPUT)
@@ -440,16 +521,10 @@ def korekcja(adres, podpis, probka=False, adres_zapisu="", bw=False):
     print(f'- Przetworzonych plików: {FILES_COUNT}')
     print(
         f"- Czas wykonania: {czas} sekund ({czas/FILES_COUNT}/sek na zdjęcie)")
-    
+
     linia()
 
 
-done = False
-
-
 while not done:
-    menu()
+    menu(akt_menu)
 connection.close()
-
-
-# dodać menu w którym wybieramy czy chcemy obrabiać pliki czy je edytować itp
