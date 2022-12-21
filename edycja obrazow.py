@@ -5,22 +5,22 @@ import numpy as np
 import time
 import shutil
 import sqlite3
+import re
 
 
-def linia():
-    print()
-    print(60*"#")
+def linia(dlugosc=60, znak="#"):
+    print(int(dlugosc)*str(znak))
 
 
 # ustalanie parametrów
 try:
-    os.mkdir("d:\\testowy")
-    SOURCE = "D:/testowy"
+    os.mkdir("d:/Edycja")
+    SOURCE = "D:/Edycja"
 except FileExistsError:
-    print('Ustawiono katalog D:\\testowy jako domyślny')
-    SOURCE = "D:/testowy"
+    print('Ustawiono katalog D:\\Edycja jako domyślny')
+    SOURCE = "D:/Edycja"
 else:
-    katalog = input('Podaj katalog ze zdjęciami, na którym chcesz pracować: ')
+    katalog = input('Podaj adres katalogu ze zdjęciami, na którym chcesz pracować: ')
     if os.path.isdir(katalog):
         SOURCE = katalog
 linia()
@@ -206,7 +206,6 @@ def zmiana_korekcji():
 
 # Pozwala ustawić podpis do zdjęcia
 
-
 def ustaw_podpis():
     dane = pobierz_ustawienia()
     nowy_podpis = input('Podaj treść jaka ma znajdować się na zdjęciu: ')
@@ -218,7 +217,6 @@ def ustaw_podpis():
             nowy_podpis, dane[5]))
 
 # Zmienia rozmiar zdjęcia
-
 
 def zmien_rozmiar(rozmiar):
     global SOURCE, MINI, OUTPUT
@@ -246,7 +244,6 @@ def zmien_rozmiar(rozmiar):
 
 # usuwa oryginalne pliki
 
-
 def usun_oryginalne():
     global SOURCE
     pytanie = input(
@@ -263,19 +260,82 @@ def usun_oryginalne():
 
 # pyta czy usunąć pliki z katalogu głównego
 
-
 def czy_usunac():
     pytanie = input('Czy usunąć oryginalne pliki? [T/N] ')
     if pytanie.lower() == 't':
         usun_oryginalne()
 
-# Wyświetla menu i steruje programem
 
+# funkcja do zmiany nazw plików
+def zmiana_nazw():
+    opcje = ['Własna nazwa + numery', "Skrócona nazwa- X pierwszych znaków", "Numery", "Prefix 'Edited'"]
+    for numer, opcja in enumerate(opcje, start=1):
+        print(f"{numer}. {opcja}")
+    opcja = int(input('Wybierz z listy powyżej opcję zmiany nazw plików[1-4]: '))
+    if opcja>=1 and opcja<=4:
+        match opcja:
+            case 1:
+                nazwa = input("Wpisz własną nazwę dla pliku: ")
+                if nazwa!="":
+                    kur.execute("UPDATE ustawienia SET nazwa_plikow='1:{}'".format(nazwa))
+                else:
+                    print('Element nie może być pusty. Nazwy plikow pozostają bez zmian...')
+            case 2:
+                znakow = input("Ile znaków chcesz zachować? ")
+                if znakow!="" and int(znakow)>0:
+                    kur.execute("UPDATE ustawienia SET nazwa_plikow='2:{}'".format(znakow))
+                else:
+                    print('Błędne dane. Nazwy pozostają bez zmian..')
+            case 3:
+                kur.execute("UPDATE ustawienia SET nazwa_plikow='3:'")
+            case 4:
+                kur.execute("UPDATE ustawienia SET nazwa_plikow='4:'")
+        connection.commit()
+    else:
+        print('Nie wybrano żadnej opcji lub była ona nieprawidłowa. Nazwy pozostają bez zmian...')
+
+
+# generowanie nowej nazwy wg numeru w bazie
+def generwuj_nazwe(oryginalna, numer=0):
+    dane=pobierz_ustawienia()
+    kod_nazwy = dane[7]
+    kod = kod_nazwy.split(":")
+    
+    match kod[0]:
+        case "1":
+            nowa_nazwa = kod[1] + "_" + str(numer) + ".jpg"
+        case "2":
+           
+            podziel_oryginalna = oryginalna.split(".")
+            print(len(podziel_oryginalna[0]), kod[1])
+            if len(podziel_oryginalna[0])>int(kod[1]):
+                print('wlazlem do warunku if')
+                nowa_nazwa = podziel_oryginalna[0][:int(kod[1])] + "." + podziel_oryginalna[1]
+                if os.path.isfile(OUTPUT + nowa_nazwa):
+                    print('wlazlem fo warunki if 2')
+                    nowa_nazwa = podziel_oryginalna[0][:int(kod[1])] + "(1)." + podziel_oryginalna[1]
+                    if os.path.isfile(OUTPUT + nowa_nazwa):
+                        print('wlazlem do warunku if 3')
+                        podziel = re.split(r'[()]', nowa_nazwa)
+                        
+                        numer=int(podziel[1])
+                        
+                        numer+=1
+                        nowa_nazwa = podziel_oryginalna[0][:int(kod[1])] + "("+ str(numer) + ")" + "." + podziel_oryginalna[1]
+            else:
+                nowa_nazwa = oryginalna
+        case "3":
+            nowa_nazwa = str(numer) + ".jpg"
+        case "4":
+            nowa_nazwa = "edited_" + oryginalna
+    return nowa_nazwa
+
+# Wyświetla menu i steruje programem
 
 def menu(menu='menu'):
     global akt_menu
-    print("Wybierz opcję, która Cię interesuje: ")
-    linia()
+    print("Wybierz opcję, która Cię interesuje: \n")
+    
     if menu == "menu":
         print("1. Koryguj zdjęcia teraz ")
         print("2. Przerób zdjęcia na czarbo-białe")
@@ -304,55 +364,71 @@ def menu(menu='menu'):
                 folder = zmiana_folderu()
                 korekcja(folder, podpis, True)
                 informacje_o_profilu()
-                Sample = input(
-                    'W wybranym katalogu został utworzony folder "Sample" a w nim jedno zdjęcie prezentujące ustawienia.\n\
-    Czy zastosować te ustawienia do wszystkich plików? [T/N] ')
-                if Sample.lower() == 't':
-                    try:
-                        shutil.rmtree(folder + "/Sample")
-                    except:
-                        pass
-                    korekcja(SOURCE, podpis)
-                else:
-                    poprawki = input(
-                        'Czy chcesz wprowadzić korekty parametrów ? [T/N]')
-                    if poprawki.lower() == 't':
-                        zmiana_korekcji()
-                    else:
+                if len(os.listdir(SOURCE + '/Sample/'))>0:
+                    Sample = input(
+                        'W wybranym katalogu został utworzony folder "Sample" a w nim jedno zdjęcie prezentujące ustawienia.\n\
+        Czy zastosować te ustawienia do wszystkich plików? [T/N] ')
+                    if Sample.lower() == 't':
+                        try:
+                            shutil.rmtree(folder + "/Sample")
+                        except:
+                            pass
                         korekcja(SOURCE, podpis)
-                czy_usunac()
+                    else:
+                        poprawki = input(
+                            'Czy chcesz wprowadzić korekty parametrów ? [T/N]')
+                        if poprawki.lower() == 't':
+                            zmiana_korekcji()
+                        else:
+                            korekcja(SOURCE, podpis)
+                    czy_usunac()
+                else:
+                    linia()
+                    print("-Brak plików w katalogu głównym...")
+                    linia()
             case "2":
                 folder = zmiana_folderu()
                 korekcja(folder, podpis, True, bw=True)
-
-                Sample = input(
-                    'W wybranym katalogu został utworzony folder "Sample" a w nim jedno zdjęcie prezentujące ustawienia.\n\
-                    Czy zastosować te ustawienia do wszystkich plików? [T/N] ')
-                if Sample.lower() == 't':
-                    try:
-                        shutil.rmtree(folder + "/Sample")
-                    except:
-                        pass
-                    korekcja(SOURCE, podpis, bw=True)
-                    czy_usunac()
+                if len(os.listdir(SOURCE + '/Sample/'))>0:
+                    
+                    Sample = input(
+                        'W wybranym katalogu został utworzony folder "Sample" a w nim jedno zdjęcie prezentujące ustawienia.\n\
+                        Czy zastosować te ustawienia do wszystkich plików? [T/N] ')
+                    if Sample.lower() == 't':
+                        try:
+                            shutil.rmtree(folder + "/Sample")
+                        except:
+                            pass
+                        korekcja(SOURCE, podpis, bw=True)
+                        czy_usunac()
+                    else:
+                        poprawki = input(
+                            'Czy chcesz wprowadzić korekty parametrów ? [T/N]')
+                        if poprawki.lower() == 't':
+                            zmiana_korekcji()
                 else:
-                    poprawki = input(
-                        'Czy chcesz wprowadzić korekty parametrów ? [T/N]')
-                    if poprawki.lower() == 't':
-                        zmiana_korekcji()
+                    linia()
+                    print("-Brak plików w katalogu głównym...")
+                    linia()
 
             case "3":
                 # edytowanie rozmiaru zdjęcia
-                rozmiar = input(
-                    "Wpisz jaki procentowy rozmiar powinno mieć finalne zdjęcie: ")
-                if "%" in rozmiar and int(rozmiar) < 100 and int(rozmiar) > 0:
-                    rozmiar = rozmiar.replace("%", "")
-                elif int(rozmiar) < 100 and int(rozmiar) > 0:
-                    rozmiar = int(rozmiar)/100
-                    zmien_rozmiar(rozmiar)
-                    czy_usunac()
+                if len(os.listdir(SOURCE + '/Sample/'))>0:
+                    rozmiar = input(
+                        "Wpisz jaki procentowy rozmiar powinno mieć finalne zdjęcie: ")
+                    if "%" in rozmiar and int(rozmiar) < 100 and int(rozmiar) > 0:
+                        rozmiar = rozmiar.replace("%", "")
+                    elif int(rozmiar) < 100 and int(rozmiar) > 0:
+                        rozmiar = int(rozmiar)/100
+                        zmien_rozmiar(rozmiar)
+                        czy_usunac()
+                    else:
+                        print('Niepoprawne dane ...')
                 else:
-                    print('Niepoprawne dane ...')
+                    linia()
+                    print("-Brak plików w katalogu głównym...")
+                    linia()
+
             case "4":
                 akt_menu = 'ustawienia'
             case "5":
@@ -361,13 +437,13 @@ def menu(menu='menu'):
     else:
         match wybor:
             case "1":
-                nowa_nazwa = input(
-                    f"Aktualnie używana nazwa to: {nazwa_plikow}, wpisz nową nazwę: ")
-                if nowa_nazwa != "":
-                    kur.execute(
-                        'UPDATE ustawienia SET nazwa_plikow="{}" WHERE nazwa="{}"')
-                    connection.commit()
-                    print("- Dane zostały zaktualizowane.")
+                linia()
+                if nazwa_plikow!="":
+                    print(f"Aktualnie używana nazwa to: {nazwa_plikow}, wpisz nową nazwę: \n")  
+                else:
+                    print(f"Aktualnie używana nazwa to: -Nie Zdefiniowano-, wpisz nową nazwę: \n")
+                zmiana_nazw()
+            
             case "2":
                 ustaw_podpis()
 
@@ -388,6 +464,7 @@ def menu(menu='menu'):
                     connection.commit()
                 else:
                     print('Podano błędny numer...')
+            
             case "4":
                 # czyść profile
                 zapytaj = input(
@@ -403,10 +480,15 @@ def menu(menu='menu'):
             case "5":
                 akt_menu = 'menu'
 
-
+# czyszczenie okna konsoli
+def clear_screen():
+    if os.name == 'nt':
+        os.system('cls')
+    else:
+        os.system('clear')
 # główna funkcja korygująca wszystkie zdjęcia lub próbkę w katalogu
 def korekcja(adres, podpis, Sample=False, adres_zapisu="", bw=False):
-
+    clear_screen()
     dane = pobierz_ustawienia()
     SHARPNESS = dane[0]
     BRIGHTNESS = dane[1]
@@ -416,18 +498,42 @@ def korekcja(adres, podpis, Sample=False, adres_zapisu="", bw=False):
     OUTPUT = SOURCE + "/Edited/"
     FILES_COUNT = 0
     new_output = SOURCE + '/Sample/'
-
+    watermark_folder = SOURCE + '/Watermark/'
+    add_logo=False
+    numer=1
     if Sample:
         if not os.path.isdir(new_output):
             print('- Tworzenie nowego katalogu pod zdjęcie próbne...')
-            os.mkdir(new_output)
-        #OUTPUT = new_output
+            try:
+                os.mkdir(new_output)
+                os.mkdir(watermark_folder)
+            except FileExistsError:
+                pass
+        else:
+            try:
+                print('- Tworzenie folderu "Watermark" na znak wodny do zdjęcia...')
+                os.mkdir(watermark_folder)
+            except FileExistsError:
+                pass
     else:
         try:
             os.mkdir(SOURCE + "/Edited")
+            os.mkdir(watermark_folder)
         except:
             pass
-
+    if os.path.isdir(SOURCE + "/Watermark/"):
+        lista = os.listdir(SOURCE + "/Watermark/")
+        if len(lista)>0:
+            if ".png" in lista[0].lower():
+                plik_logo = lista[0]
+                print('Logo: ', plik_logo)
+                pytanie = input("Znaleziono folder ze znakiem wodnym. Czy chcesz dodać go zamiast podpisu? [T/N] ")
+                if pytanie.lower()=='t':
+                    add_logo=True
+            else:
+                print('- Znaleziono znaki wodne, jednak muszą być z rozszerzeniem PNG aby je zastosować.')
+        else:
+            print("- Nie znaleziono znaków wodnych lub w folderze znajduje się więcej niż jeden...")
     TIME_BEFORE = time.time()
     for name in os.listdir(SOURCE):
         # weź pod uwagę tylko zdjęcia w formacie JPG
@@ -437,8 +543,10 @@ def korekcja(adres, podpis, Sample=False, adres_zapisu="", bw=False):
             file_adress = os.path.join(SOURCE, name)
             # wyświetl nazwę obrabianego pliku
             print("Pracuję nad: ", name, "\n")
+            
             # dla każdego zdjęcia popraw wartości ostrości, jasności i kontrastu
             with Image.open(file_adress) as new_file:
+                width, height = new_file.size
                 # tworzenie miniatury dla zoptymalizowania czasu obróbki
                 nowe_wymiary = new_file.width // 4, new_file.height // 4
                 mini = new_file.resize(nowe_wymiary)
@@ -463,12 +571,12 @@ def korekcja(adres, podpis, Sample=False, adres_zapisu="", bw=False):
                 enhance = ImageEnhance.Sharpness(new_file)
                 new_file = enhance.enhance(SHARPNESS)
                 # podpisz zdjęcie jeśli zdefiniowano
-                if podpis != "":
-                    width, height = new_file.size
+                if podpis != "" and not add_logo:
+                    print("- Dodaję podpis...")
 
-                    rect = ImageDraw.Draw(new_file, mode='RGBA')
+                    kwadrat = ImageDraw.Draw(new_file, mode='RGBA')
 
-                    rysuj = ImageDraw.Draw(new_file)
+                    napis = ImageDraw.Draw(new_file)
                     czcionka = ImageFont.truetype(
                         'arial.ttf', int(width*0.015))
                     pos_x, pos_y, szerokosc_czcionki, wysokosc_czcionki = czcionka.getbbox(
@@ -476,9 +584,9 @@ def korekcja(adres, podpis, Sample=False, adres_zapisu="", bw=False):
 
                     text_x = width - szerokosc_czcionki - (width*0.015)
                     text_y = height - wysokosc_czcionki - (height*0.015)
-                    rect.rectangle((text_x-(width*0.007), text_y-(height*0.007),
+                    kwadrat.rectangle((text_x-(width*0.007), text_y-(height*0.007),
                                    width-(width*0.007), height-(height*0.007)), fill=(0, 0, 0, 100))
-                    rysuj.text((text_x, text_y), podpis,
+                    napis.text((text_x, text_y), podpis,
                                font=czcionka, fill=(255, 255, 255))
 
                 if not bw:
@@ -496,16 +604,27 @@ def korekcja(adres, podpis, Sample=False, adres_zapisu="", bw=False):
                 else:
                     print("- Zmieniam obraz na czarbo-biały...")
                     new_file = new_file.convert("L")
-
+                
+                if add_logo:
+                    print('- Dodaję logo...')
+                    logo = Image.open(watermark_folder + plik_logo)
+                    logo_width, logo_height = logo.size
+                    logo_mini_width = int(width/10)
+                    skala = logo_mini_width / logo_width
+                    logo_mini_height = int(skala * logo_height)
+                    logo=logo.resize((logo_mini_width, logo_mini_height))
+                    new_file.paste(logo, (width-logo_mini_width, height - logo_mini_height), logo)
+                
                 # zapis poprawionego pliku
-                if Sample:
-                    new_file.save(new_output + name)
+                # zapisz jeśli ma byc to próbka
+                if Sample:                    
+                    new_file.save(new_output + generwuj_nazwe(name, numer))
                     OUTPUT = OUTPUT.replace("//", "\\")
-
+                # zapisz jeśli zaakceptowano próbkę
                 else:
-                    new_file.save(OUTPUT + name)
+                    new_file.save(OUTPUT + generwuj_nazwe(name, numer))
                     OUTPUT = OUTPUT.replace("//", "\\")
-
+                numer+=1
                 linia()
 
         if Sample and FILES_COUNT > 0:
@@ -519,12 +638,14 @@ def korekcja(adres, podpis, Sample=False, adres_zapisu="", bw=False):
     TIME_AFTER = time.time()
     czas = int(TIME_AFTER-TIME_BEFORE)
     print(f'- Przetworzonych plików: {FILES_COUNT}')
-    print(
-        f"- Czas wykonania: {czas} sekund ({czas/FILES_COUNT}/sek na zdjęcie)")
-
+    if FILES_COUNT>0:
+        print(f"- Czas wykonania: {czas} sekund ({czas/FILES_COUNT}/sek na zdjęcie)")
     linia()
 
 
 while not done:
     menu(akt_menu)
 connection.close()
+
+# dodać interface graficzny
+# dodać suwaki do parametrów
