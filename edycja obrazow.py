@@ -8,6 +8,7 @@ import sqlite3
 import re
 
 
+
 def linia(dlugosc=60, znak="#"):
     print(int(dlugosc)*str(znak))
 
@@ -645,6 +646,7 @@ def korekcja(adres, podpis, Sample=False, adres_zapisu="", bw=False):
 
 while not done:
     menu(akt_menu)
+
 connection.close()
 
 # dodać interface graficzny
